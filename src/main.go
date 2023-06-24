@@ -102,44 +102,53 @@ func main() {
 	// Routes
 	e.GET("/:encodedPath", func(c echo.Context) error {
 		encodedPath := c.Param("encodedPath")
-
-		utf8Path, err := url.PathUnescape(encodedPath)
+		decodedPath, err := url.PathUnescape(encodedPath)
 		if err != nil {
-			return c.String(http.StatusBadRequest, fmt.Sprintf("Failed to unescape url path: %v", err))
+			return err
 		}
 
-		// Convert UTF-8 to EUC-JP
-		eucJPReader := transform.NewReader(strings.NewReader(utf8Path), japanese.EUCJP.NewEncoder())
-		eucJPPath, err := ioutil.ReadAll(eucJPReader)
+		url := fmt.Sprintf("https://seesaawiki.jp/%s", decodedPath)
+		res, err := http.Get(url)
 		if err != nil {
-			return c.String(http.StatusBadRequest, fmt.Sprintf("Failed to convert url path to EUC-JP: %v", err))
+			return err
+		}
+		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			return fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
 		}
 
-		// Fetch OG data
-		redirectUrl := "https://seesaawiki.jp/" + string(eucJPPath)
-		resp, err := http.Get(redirectUrl)
+		doc, err := goquery.NewDocumentFromReader(res.Body)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to fetch OG data: %v", err))
-		}
-		defer resp.Body.Close()
-
-		doc, err := goquery.NewDocumentFromReader(resp.Body)
-		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to parse document: %v", err))
+			return err
 		}
 
+		var ogTags string
 		doc.Find("meta").Each(func(i int, s *goquery.Selection) {
 			if property, exists := s.Attr("property"); exists {
 				if strings.HasPrefix(property, "og:") {
 					content, _ := s.Attr("content")
-					c.Response().Header().Add(property, content)
+					ogTags += fmt.Sprintf("<meta property=\"%s\" content=\"%s\">\n", property, content)
 				}
 			}
 		})
 
-		// Redirect to the seesaawiki.jp URL with the EUC-JP path
-		return c.Redirect(http.StatusTemporaryRedirect, redirectUrl)
+		redirectHTML := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+  %s
+</head>
+<body>
+  <script>
+    window.location.href = "%s";
+  </script>
+</body>
+</html>
+`, ogTags, url)
+
+		return c.HTML(http.StatusOK, redirectHTML)
 	})
+
 	// Start server
 	e.Logger.Fatal(e.Start(":1323"))
 }
