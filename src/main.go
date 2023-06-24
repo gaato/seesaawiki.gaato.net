@@ -91,6 +91,7 @@ func main() {
 
 		// seesaawiki.jp を seesaawiki.gaato.net に置換
 		parsedUrl.Host = strings.Replace(parsedUrl.Host, "seesaawiki.jp", "seesaawiki.gaato.net", 1)
+		parsedUrl.Scheme = "http"
 
 		return c.Render(http.StatusOK, "index.html", map[string]interface{}{
 			"InputUrl": inputUrl,
