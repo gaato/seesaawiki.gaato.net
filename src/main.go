@@ -140,7 +140,14 @@ func main() {
 			if property, exists := s.Attr("property"); exists {
 				if strings.HasPrefix(property, "og:") {
 					content, _ := s.Attr("content")
-					ogTags += fmt.Sprintf("<meta property=\"%s\" content=\"%s\">\n", property, content)
+
+					// Convert EUC-JP to UTF-8
+					utf8Reader := transform.NewReader(strings.NewReader(content), japanese.EUCJP.NewDecoder())
+					utf8Content, err := ioutil.ReadAll(utf8Reader)
+					if err != nil {
+						return
+					}
+					ogTags += fmt.Sprintf("<meta property=\"%s\" content=\"%s\">\n", property, string(utf8Content))
 				}
 			}
 		})
