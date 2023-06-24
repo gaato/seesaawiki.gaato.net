@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Discord で開ける Seesaa Wiki のリンクを生成</title>
+  <style>
+    #output-url {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+  </style>
+  <script>
+    function copyToClipboard() {
+      var copyText = document.getElementById("output-url");
+      var textArea = document.createElement("textarea");
+      textArea.value = copyText.textContent;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("Copy");
+      textArea.remove();
+    }
+  </script>
+</head>
+
+<body>
+  <h1>Discord で開ける Seesaa Wiki のリンクを生成</h1>
+  <form action="/" method="GET">
+    <label for="input-url">Enter Seesaa Wiki URL:</label><br>
+    <input type="text" id="input-url" name="url" value="{{.InputUrl}}"><br>
+    <input type="submit" value="Convert">
+  </form>
+  {{if .Url}}
+  <h2>Converted URL:</h2>
+  <p id="output-url">{{.Url}}</p>
+  <button onclick="copyToClipboard()">Copy URL</button>
+  {{end}}
+</body>
+
+</html>
