@@ -100,6 +100,7 @@ func main() {
 	})
 
 	// Routes
+
 	e.GET("/:encodedPath", func(c echo.Context) error {
 		encodedPath := c.Param("encodedPath")
 		decodedPath, err := url.PathUnescape(encodedPath)
@@ -107,7 +108,19 @@ func main() {
 			return err
 		}
 
-		url := fmt.Sprintf("https://seesaawiki.jp/%s", decodedPath)
+		// Convert UTF-8 to EUC-JP
+		eucJPReader := transform.NewReader(strings.NewReader(decodedPath), japanese.EUCJP.NewEncoder())
+		eucJPDecodedPath, err := ioutil.ReadAll(eucJPReader)
+		if err != nil {
+			return err
+		}
+
+		// URL encode the EUC-JP string
+		encodedEucJP := url.PathEscape(string(eucJPDecodedPath))
+		encodedEucJP = strings.ReplaceAll(encodedEucJP, "%2F", "/")
+
+		url := fmt.Sprintf("https://seesaawiki.jp/%s", encodedEucJP)
+		fmt.Println(url)
 		res, err := http.Get(url)
 		if err != nil {
 			return err
